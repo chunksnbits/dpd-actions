@@ -2,7 +2,7 @@
 'use strict';
 
 var _ = require('lodash');
-var logger = require('npmlog');
+var npmlog = require('npmlog');
 var Resource = require('deployd/lib/resource');
 var Script = require('deployd/lib/script');
 var util = require('util');
@@ -135,7 +135,7 @@ ActionResource.prototype.createDomain = function(data) {
       delete domain.data[property];
     },
     'this': data,
-    data: data
+    data: data,
 
     // Additional resources, that will come in handy...
     // Provide dependency management access
@@ -145,7 +145,7 @@ ActionResource.prototype.createDomain = function(data) {
     logger: logger,
 
     // Allow internal access to other resources
-    dpd: this.internalClient,
+    dpd: this.internalClient
   };
 }
 
