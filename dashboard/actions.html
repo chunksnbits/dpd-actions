@@ -1,0 +1,106 @@
+<div id="actions" class="hide">
+  <div class="panel well">
+    <h3>
+      Actions
+    </h3>
+    <div class="panel-row">
+      <div class="panel-cell nav">
+        <div id="property-list" class="placeholder">
+          <ul class="component-list">
+            <li class="component-item placeholder new-item component-item-header">
+              <div class="component-item alert alert-info" data-bind="visible: isEmpty">
+                No items have yet been defined. <br />
+                <strong>Get started</strong> by adding actions you want to execute
+              </div>
+              <div class="component-item-header">
+                <label style="display: inline">Name: </label>
+              </div>
+              <div>
+                <input id="name" type="text" placeholder="Enter a name for this action" data-bind="value: creatable.name" />
+              </div>
+
+              <div class="component-item-header">
+                <label style="display: inline">Description: </label>
+              </div>
+              <div>
+                <textarea id="description" type="text" data-bind="value: creatable.description">
+                  Enter a description for this action
+                </textarea>
+              </div>
+
+              <div class="component-item-header">
+                <input id="name" type="checkbox" data-bind="value: creatable.internal" />
+                <label style="display: inline">For internal use only? </label>
+              </div>
+
+              <div class="align-right">
+                <button class="btn btn-success" data-bind="click: $root.onAdd"><i class="icon-white icon-plus"></i>&nbsp;Create</button>
+              </div>
+            </li>
+            <!-- ko foreach: actions -->
+            <li class="component-item" data-bind="click: $root.onEdit">
+              <div class="component-item-header">
+                <div class=" no-show-on-edit">
+                  <i class="icon-white icon-off" data-original-title="string"></i>
+                  <strong data-bind="text: name"></strong>
+                  <span class="label" data-bind="visible: internal">internal</span>
+                  <span class="float-right hide">
+                    <button class="btn btn-inverse" data-bind="click: $root.onDelete"><i class="icon-white icon-remove"></i></button>
+                  </span>
+                  <br /><br />
+                  <p data-bind="text: description"></p>
+                </div>
+                <div class="show-on-edit">
+                  <div class="component-item-header">
+                    <label style="display: inline">Name: </label>
+                  </div>
+                  <div>
+                    <input id="name" type="text" placeholder="Enter a name for this action" data-bind="value: $root.editable.name" />
+                  </div>
+
+                  <div class="component-item-header">
+                    <label style="display: inline">Description: </label>
+                  </div>
+                  <div>
+                    <textarea id="description" type="text" data-bind="value: $root.editable.description">
+                      Enter a description for this action
+                    </textarea>
+                  </div>
+
+                  <div class="component-item-header">
+                    <input id="name" type="checkbox" data-bind="value: $root.editable.internal" />
+                    <label style="display: inline">For internal use only? </label>
+                  </div>
+
+                  <div class="align-right">
+                    <button class="btn btn-success" data-bind="click: $root.onUpdate"><i class="icon-white icon-edit"></i>&nbsp;Update</button>
+
+                  </div>
+                </div>
+              </div>
+            </li>
+            <!-- /ko -->
+          </ul>
+        </div>
+      </div>
+      <div class="panel-cell action-editor">
+        <div class="placeholder new-item component-item-header">
+          <h3 data-bind="visible: isNew">
+            Create new action
+          </h3>
+          <h3 data-bind="visible: isEdit">
+            Edit action: <span data-bind="text: editable.name"></span>
+          </h3>
+          <br />
+          <div data-bind="visible: $root.isInitialized">
+            <div>
+              <div class="editor-container">
+                <div id="ace-editor"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,10 @@
+{
+  "name": "dpd-actions",
+  "description": "A deployd (http://deployd.com/) plugin that allows to define custom route actions",
+  "version": "0.0.1",
+  "dependencies": {
+    "lodash": "^2.4.1",
+    "npmlog": "^0.1.1"
+  },
+  "scripts": {}
+}
