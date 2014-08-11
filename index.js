@@ -8,7 +8,6 @@ var path = require('path');
 var Resource = require('deployd/lib/resource');
 var Script = require('deployd/lib/script');
 var util = require('util');
-var q = require('q');
 
 var _tag_;
 
@@ -69,23 +68,12 @@ ActionResource.prototype = _.extend(ActionResource.prototype, Resource.prototype
 ActionResource.prototype.clientGeneration = true;
 ActionResource.prototype.clientGenerationExec = ['action'];
 
-/**
- *  Tests if the current request comes from a local client.
- *  This is verified by using either an internal client dpd,
- *  or adding a key as specified in the config to the request.
- *
- */
-ActionResource.prototype.isInternal = function(query, internal) {
-  var keyValidation = query && query['__internal'] !== undefined && this.config.key !== undefined && query['__internal'] === this.config.key;
-  var result = internal || keyValidation;
-  return result;
-};
-
 ActionResource.prototype.handle = function(context) {
 
   logger.info(_tag_, 'Handling context: %j', context.url);
 
   if (context.url.indexOf('/action') === 0) {
+
     var requestPath = context.url.replace(/^\/action\//, '');
     var action = this.actions[requestPath];
 
@@ -97,6 +85,7 @@ ActionResource.prototype.handle = function(context) {
             if (error) {
               logger.error(_tag_, 'Failed executing action %j with error: %j', action.name, error);
             } else {
+              logger.info(_tag_, 'Successfully executed action %j', action.name);
               context.done(error, action.data);
             }
           });
@@ -111,11 +100,16 @@ ActionResource.prototype.handle = function(context) {
       if (!action) {
         logger.error(_tag_, 'No action found for action %j', context.url);
       } else {
-        logger.error(_tag_, 'An unexpected error occured. If this problem persists, please contact support!');
+        logger.error(_tag_, 'An unexpected error occured.');
       }
 
       context.done('Failed executing action:' + requestPath);
     }
+  }
+
+  // Not an action, let Resource handle request
+  else {
+    Resource.prototype.handle.apply(this, arguments);
   }
 };
 
@@ -123,9 +117,6 @@ ActionResource.prototype.handle = function(context) {
 ActionResource.prototype.createDomain = function(action) {
   var hasErrors = false;
   var errors = {};
-
-  var persistFunction = this.persist;
-  var fetchFunction = this.fetch;
 
   var domain = {
 
@@ -153,18 +144,15 @@ ActionResource.prototype.createDomain = function(action) {
 
     'this': action.data,
     data: action.data,
-    action: action,
 
     // Additional resources, that will come in handy...
     // Provide dependency management access
     require: require,
 
     // Allow internal access to other resources
-    store: function(data, callback) {
-      return persistFunction(domain.action, data, callback);
-    },
-    fetch: function(query, callback) {
-      return fetchFunction(domain.action, query, callback);
+    store: {
+      persist: this.preparePersistFunction(action),
+      fetch: this.prepareFetchFunction(action)
     },
 
     dpd: this.internalClient
@@ -179,26 +167,40 @@ ActionResource.prototype.handleResponse = function(callback) {
   };
 };
 
-ActionResource.prototype.store = function(action, element, callback) {
-  if (element.id) {
-    action.store.update({
-      id: element.id
-    }, element, this.handleResponse(callback));
-  } else {
-    action.store.insert(element, this.handleResponse(callback));
-  }
+ActionResource.prototype.preparePersistFunction = function(action) {
+  var _this = this;
+
+  return function(element, callback) {
+    if (element.id) {
+      action.store.update({
+        id: element.id
+      }, element, _this.handleResponse(callback));
+    } else {
+      action.store.insert(element, _this.handleResponse(callback));
+    }
+  };
 };
 
-ActionResource.prototype.fetch = function(action, query, callback) {
-  if (_.isObject(query)) {
-    this.store.find(query, this.handleResponse(callback));
-  }
-  // id was provided
-  else {
-    this.store.first({
-      id: query
-    }, this.handleResponse(callback));
-  }
+ActionResource.prototype.prepareFetchFunction = function(action) {
+  var _this = this;
+
+  return function(query, callback) {
+
+    // No query argument provided, fetch all.
+    if (_.isFunction(query)) {
+      action.store.find(_this.handleResponse(query));
+    }
+    // Query provided.
+    else if (_.isObject(query)) {
+      action.store.find(query, _this.handleResponse(callback));
+    }
+    // Id was provided.
+    else {
+      action.store.first({
+        id: query
+      }, _this.handleResponse(callback));
+    }
+  };
 };
 
 module.exports = ActionResource;
