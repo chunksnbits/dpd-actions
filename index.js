@@ -2,10 +2,13 @@
 'use strict';
 
 var _ = require('lodash');
-var npmlog = require('npmlog');
+var internalClient = require('deployd/lib/internal-client');
+var logger = require('npmlog');
+var path = require('path');
 var Resource = require('deployd/lib/resource');
 var Script = require('deployd/lib/script');
 var util = require('util');
+var q = require('q');
 
 var _tag_;
 
@@ -26,12 +29,14 @@ function ActionResource(name, options) {
     action.name = action.name.replace(' ', '-')
       .toLowerCase();
 
-    action.executable = Script.load(this.options.configPath + '/actions/' + action.name + '.js',
+    action.store = options && action.resource ? options.db.createStore(action.resource) : {};
+
+    action.executable = Script.load(this.options.configPath + '/' + action.name + '.js',
       function(error, script) {
         if (!error) {
           action.executable = script;
         } else {
-          logger.error(_tag_, 'Failed to init executable for action %j. Failed with error: %j', action.name, error);
+          throw new Error('Failed to init executable for action ' + action.name + '. Failed with error: ' + error.message);
         }
       });
 
@@ -46,10 +51,21 @@ util.inherits(ActionResource, Resource);
 ActionResource.label = 'ActionResource';
 ActionResource.defaultPath = '/action';
 
-ActionResource.dashboard.path = './dashboard';
-ActionResource.dashboard.pages.push('Actions');
+ActionResource.dashboard = {
+  path: path.join(__dirname, 'dashboard'),
+  pages: ['Actions'],
+  scripts: [
+    '/js/lib/jquery-ui-1.8.22.custom.min.js',
+    '/js/lib/knockout-2.1.0.js',
+    '/js/lib/knockout.mapping.js',
+    '/js/util/knockout-util.js',
+    '/js/util/key-constants.js',
+    '/js/actions.js',
+    '/js/util.js',
+  ]
+};
 
-ActionResource.prototype = _.extend(ActionResource.prototype, Collection.prototype);
+ActionResource.prototype = _.extend(ActionResource.prototype, Resource.prototype);
 ActionResource.prototype.clientGeneration = true;
 ActionResource.prototype.clientGenerationExec = ['action'];
 
@@ -76,9 +92,16 @@ ActionResource.prototype.handle = function(context) {
     if (action) {
       action.data = _.merge({}, context.query, context.body);
       try {
-        this.executeAction(context, action);
+        action.executable.run(context, this.createDomain(action),
+          function(error) {
+            if (error) {
+              logger.error(_tag_, 'Failed executing action %j with error: %j', action.name, error);
+            } else {
+              context.done(error, action.data);
+            }
+          });
       } catch (error) {
-        logger.error(_tag_, 'Failed executing action: %j with error: %j', action.name, error);
+        logger.error(_tag_, 'Failed executing action: %j with error: %j', action.name, error.message);
         context.done(error);
       }
     }
@@ -97,27 +120,20 @@ ActionResource.prototype.handle = function(context) {
 };
 
 
-ActionResource.prototype.executeAction = function(context, action) {
-  logger.info(_tag_, 'Executing action: %j', action.name);
-
-  var _this = this;
-
-  action.executable.run(context, this.createDomain(action.data),
-    function(error) {
-      logger.error(_tag_, 'Failed executing action %j with error: %j', action.name, error);
-      context.done(error);
-    });
-};
-
-ActionResource.prototype.createDomain = function(data) {
+ActionResource.prototype.createDomain = function(action) {
   var hasErrors = false;
+  var errors = {};
 
-  return {
+  var persistFunction = this.persist;
+  var fetchFunction = this.fetch;
+
+  var domain = {
 
     // Helpers as provided with default Collection Resource
-    error: function(key, val) {
-      debug('error %s %s', key, val);
-      errors[key] = val || true;
+    error: function(key, value) {
+      logger.error(_tag_, key, value);
+
+      errors[key] = value || true;
       hasErrors = true;
     },
     errorIf: function(condition, key, value) {
@@ -134,19 +150,55 @@ ActionResource.prototype.createDomain = function(data) {
     hide: function(property) {
       delete domain.data[property];
     },
-    'this': data,
-    data: data,
+
+    'this': action.data,
+    data: action.data,
+    action: action,
 
     // Additional resources, that will come in handy...
     // Provide dependency management access
     require: require,
 
-    // Logging
-    logger: logger,
-
     // Allow internal access to other resources
+    store: function(data, callback) {
+      return persistFunction(domain.action, data, callback);
+    },
+    fetch: function(query, callback) {
+      return fetchFunction(domain.action, query, callback);
+    },
+
     dpd: this.internalClient
   };
-}
+
+  return domain;
+};
+
+ActionResource.prototype.handleResponse = function(callback) {
+  return function(error, data) {
+    callback(error, data);
+  };
+};
+
+ActionResource.prototype.store = function(action, element, callback) {
+  if (element.id) {
+    action.store.update({
+      id: element.id
+    }, element, this.handleResponse(callback));
+  } else {
+    action.store.insert(element, this.handleResponse(callback));
+  }
+};
+
+ActionResource.prototype.fetch = function(action, query, callback) {
+  if (_.isObject(query)) {
+    this.store.find(query, this.handleResponse(callback));
+  }
+  // id was provided
+  else {
+    this.store.first({
+      id: query
+    }, this.handleResponse(callback));
+  }
+};
 
 module.exports = ActionResource;
