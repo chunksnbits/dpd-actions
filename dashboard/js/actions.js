@@ -1,7 +1,7 @@
 /* jshint node: true */
 /* global _, $, ko, ui, dpd, ace, Context */
 
-(function () {
+(function() {
   'use strict';
 
   if (window.actionsInitialized) {
@@ -12,12 +12,6 @@
 
   var $editor = $('#ace-editor');
   var editor, bindings, configuration;
-
-  var defaults = {
-    name: '',
-    description: '',
-    internal: false
-  };
 
   function render(configuration) {
 
@@ -30,28 +24,28 @@
     bindings = {};
 
     bindings.editable = {
+      id: ko.observable(''),
       name: ko.observable(''),
-      description: ko.observable(''),
-      internal: ko.observable(false)
+      resource: ko.observable('')
     };
 
     bindings.creatable = {
       name: ko.observable(''),
-      description: ko.observable(''),
-      internal: ko.observable(false)
+      resource: ko.observable('')
     };
 
-    bindings.actions = data.actions;
-
-    _.forEach(bindings.actions, function (action, index) {
-      bindings.actions[index] = _.defaults(action, defaults);
+    var reset = _.bind(function() {
+      bindings.creatable.name('');
+      bindings.creatable.resource('');
     });
 
-    bindings.onEdit = _.bind(function (action, event) {
+    bindings.actions = ko.observableArray(data.actions);
+
+    bindings.onEdit = _.bind(function(action) {
 
       $('.edit-mode')
         .removeClass('edit-mode');
-      $(event.currentTarget)
+      $('#action-' + action.name)
         .addClass('edit-mode');
 
       if (!action.name) {
@@ -61,9 +55,9 @@
       $('.action-edit')
         .toggleClass('hide');
 
+      bindings.editable.id(action.name);
       bindings.editable.name(action.name);
-      bindings.editable.description(action.description);
-      bindings.editable.internal(action.internal);
+      bindings.editable.resource(action.resource);
 
       bindings.isNew(false);
       bindings.isEdit(true);
@@ -72,67 +66,100 @@
       fetchCode();
     });
 
-    bindings.onAdd = _.bind(function () {
-      configuration.actions.push({
+    bindings.onAdd = _.bind(function() {
+      var action = {
         name: bindings.creatable.name(),
-        description: bindings.creatable.description(),
-        internal: bindings.creatable.internal()
-      });
+        resource: bindings.creatable.resource()
+      };
 
-      storeConfiguration(configuration);
+      data.actions.push(action);
+
+      storeConfiguration(data);
       storeCode(bindings.creatable.name());
+
+      bindings.actions(data.actions);
+
+      reset();
+
+      bindings.editable.name(action.name);
+      bindings.editable.resource(action.resource);
+
+
+      $('.edit-mode')
+        .removeClass('edit-mode');
+      $('#action-' + action.name)
+        .addClass('edit-mode');
+
     }, bindings);
 
-    bindings.onUpdate = _.bind(function () {
+    bindings.onUpdate = _.bind(function(action, event) {
+      var name = bindings.editable.id();
 
-      _.forEach(configuration.actions, function (action, index) {
-        if (bindings.editable.name === action.name) {
+      _.forEach(configuration.actions, function(action, index) {
+        if (name === action.name) {
           configuration.actions[index] = {
             name: bindings.editable.name(),
-            description: bindings.editable.description(),
-            internal: bindings.editable.internal()
+            resource: bindings.editable.resource()
           };
         }
       });
 
       storeConfiguration(configuration);
       storeCode(bindings.editable.name());
+
+      bindings.actions(configuration.actions);
+
+      $('#action-' + action.name)
+        .addClass('edit-mode');
+
     }, bindings);
 
-    bindings.onNew = _.bind(function () {
+    bindings.onNew = _.bind(function() {
       bindings.editable.name('');
+      bindings.editable.resource('');
+
+      $('.edit-mode')
+        .removeClass('edit-mode');
+      $('#action-new')
+        .addClass('edit-mode');
     });
 
-    bindings.onDelete = _.bind(function (action) {
+    bindings.onDelete = _.bind(function(action, event) {
 
-      _.forEach(bindings.actions, function (storedAction, index) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      _.forEach(bindings.actions(), function(storedAction, index) {
         if (storedAction.name === action.name) {
-          bindings.actions.splice(index, 1);
+          data.actions.splice(index, 1);
         }
       });
 
-      storeConfiguration();
+      bindings.actions(data.actions);
+
+      storeConfiguration(data);
     });
 
-    bindings.isEmpty = ko.observable(bindings.actions.length === 0);
+    bindings.isEmpty = ko.observable(bindings.actions().length === 0);
     bindings.isNew = ko.observable(true);
     bindings.isEdit = ko.observable(false);
     bindings.isEditMode = ko.observable(false);
     bindings.isInitialized = ko.observable(true);
 
     $(document)
-      .on('mouseover', '.component-item', function () {
+      .on('mouseover', '.component-item', function() {
         $(this)
           .find('.hide')
           .toggle(true);
       })
-      .on('mouseout', '.component-item', function () {
+      .on('mouseout', '.component-item', function() {
         $(this)
           .find('.hide')
           .toggle(false);
       });
 
-    ko.applyBindings(bindings);
+    bindings.availableResources = [];
+    fetchAvailableResources(bindings);
   }
 
   function createEditor() {
@@ -152,7 +179,7 @@
       editor.getSession()
         .setValue(code);
       editor.getSession()
-        .on('change', function () {
+        .on('change', function() {
           // trackUpdate(editor);
         });
       editor.commands.addCommand({
@@ -161,7 +188,7 @@
           win: 'Ctrl-S',
           mac: 'Command-S'
         },
-        exec: function () {
+        exec: function() {
           storeCode(bindings.editable.name());
         }
       });
@@ -170,37 +197,48 @@
 
   function storeConfiguration(configuration) {
     dpd('__resources')
-      .put(Context.resourceId, configuration, function (resource, error) {
+      .put(Context.resourceId, configuration, function(resource, error) {
         if (error) {
           console.error(error);
         }
       });
   }
 
+  function fetchAvailableResources(bindings) {
+    dpd('__resources').get(function(resources) {
+      bindings.availableResources = _.compact(
+        _.map(resources, function(resource) {
+          return resource.type !== 'ActionResource' ? resource.id : false;
+        }));
+
+      bindings.availableResources.splice(0, 0, '');
+
+      ko.applyBindings(bindings);
+    });
+  }
+
   function storeCode(name) {
     var value = editor.getSession()
-      .getValue();
+      .getValue() || '';
 
     var fileName = name.replace(' ', '-')
       .toLowerCase() + '.js';
 
-    if (value) {
-      dpd('__resources')
-        .put(Context.resourceId + '/actions/' + fileName, {
-          value: value
-        }, function (resource, error) {
-          if (error) {
-            return ui.error('Error saving event', error.message)
-              .effect('slide');
-          }
-          if (!$('#notifications li')
-            .length) {
-            ui.notify('Saved')
-              .hide(1000)
-              .effect('slide');
-          }
-        });
-    }
+    dpd('__resources')
+      .put(Context.resourceId + '/' + fileName, {
+        value: value
+      }, function(resource, error) {
+        if (error) {
+          return ui.error('Error saving event', error.message)
+            .effect('slide');
+        }
+        if (!$('#notifications li')
+          .length) {
+          ui.notify('Saved')
+            .hide(1000)
+            .effect('slide');
+        }
+      });
   }
 
   function fetchCode(callback) {
@@ -210,12 +248,15 @@
         .toLowerCase() + '.js';
 
       dpd('__resources')
-        .get(Context.resourceId + '/actions/' + fileName, function (resource) {
-          editor.getSession()
-            .setValue(resource.value);
+        .get(Context.resourceId + '/' + fileName,
+          function(resource, error) {
+            if (!error) {
+              editor.getSession()
+                .setValue(resource.value);
 
-          callback && callback(resource.value);
-        });
+              callback && callback(resource.value);
+            }
+          });
     }
   }
 
@@ -225,7 +266,7 @@
       .get(Context.resourceId, callback);
   }
 
-  fetchProperties(function (resourceConfig) {
+  fetchProperties(function(resourceConfig) {
     configuration = resourceConfig;
     render(resourceConfig);
   });

@@ -1,80 +1,107 @@
 <div id="actions" class="hide">
   <div class="panel well">
     <h3>
-      Actions
+      My actions
     </h3>
     <div class="panel-row">
       <div class="panel-cell nav">
         <div id="property-list" class="placeholder">
           <ul class="component-list">
-            <li class="component-item placeholder new-item component-item-header">
-              <div class="component-item alert alert-info" data-bind="visible: isEmpty">
-                No items have yet been defined. <br />
-                <strong>Get started</strong> by adding actions you want to execute
-              </div>
-              <div class="component-item-header">
-                <label style="display: inline">Name: </label>
-              </div>
-              <div>
-                <input id="name" type="text" placeholder="Enter a name for this action" data-bind="value: creatable.name" />
-              </div>
+            <li id="action-new"
+                class="component-item edit-mode placeholder component-item-header">
+              <h3 data-bind="click: $root.onNew">
+                Create new
+                <a class="btn-action-new action-new float-right" >
+                  <i class="icon-white icon-plus"></i>
+                </a>
+              </h3>
 
-              <div class="component-item-header">
-                <label style="display: inline">Description: </label>
-              </div>
-              <div>
-                <textarea id="description" type="text" data-bind="value: creatable.description">
-                  Enter a description for this action
-                </textarea>
-              </div>
+              <div class="show-on-edit">
+                <div class="component-item alert alert-info" data-bind="visible: isEmpty">
+                  No items have yet been defined. <br />
+                  <strong>Get started</strong> by adding actions you want to execute
+                </div>
+                <div class="component-item-block">
+                  <label style="display: inline">Name: </label>
+                </div>
 
-              <div class="component-item-header">
-                <input id="name" type="checkbox" data-bind="value: creatable.internal" />
-                <label style="display: inline">For internal use only? </label>
-              </div>
+                <div class="component-item-block">
+                  <input id="name" type="text" placeholder="Enter a name for this action" data-bind="value: creatable.name" />
+                </div>
 
-              <div class="align-right">
-                <button class="btn btn-success" data-bind="click: $root.onAdd"><i class="icon-white icon-plus"></i>&nbsp;Create</button>
+                <div class="component-item-block">
+                  <label style="display: inline">Resource: </label>
+                </div>
+
+                <div class="component-item-block">
+                  <select id="resource"
+                          data-bind="value: creatable.resource,
+                                     options: availableResources">
+                  </select>
+                </div>
+
+                <div class="component-item-block footnote">
+                  Attaching a resource gives you direct db access to the resource, using the store object within the action.
+                </div>
+
+                <div class="component-item-block">
+                  <button class="btn btn-success"
+                          data-bind="click: $root.onAdd">
+                    <i class="icon-white icon-plus"></i>&nbsp;Create
+                  </button>
+                </div>
               </div>
             </li>
             <!-- ko foreach: actions -->
-            <li class="component-item" data-bind="click: $root.onEdit">
-              <div class="component-item-header">
-                <div class=" no-show-on-edit">
-                  <i class="icon-white icon-off" data-original-title="string"></i>
-                  <strong data-bind="text: name"></strong>
-                  <span class="label" data-bind="visible: internal">internal</span>
-                  <span class="float-right hide">
-                    <button class="btn btn-inverse" data-bind="click: $root.onDelete"><i class="icon-white icon-remove"></i></button>
+            <li class="component-item action"
+                data-bind="attr: { id: 'action-' + name }">
+
+              <div class="component-item-header"
+                   data-bind="click: $root.onEdit">
+
+                <div class="no-show-on-edit">
+                  <span>
+                    <i class="icon-white icon-off"
+                       data-original-title="string">
+                    </i>
+                    <strong data-bind="text: name"></strong>
                   </span>
-                  <br /><br />
-                  <p data-bind="text: description"></p>
+
+                  <span class="pull-right">
+                    <a href="#" data-bind="click: $root.onDelete">
+                      <i class="icon-white icon-remove"></i>
+                    </a>
+                  </span>
+
+                  <span class="pull-right label"
+                        data-bind="visible: resource,
+                                   text: resource">
+                  </span>
+
                 </div>
                 <div class="show-on-edit">
-                  <div class="component-item-header">
+
+                  <div class="component-item-block">
                     <label style="display: inline">Name: </label>
                   </div>
-                  <div>
+
+                  <div class="component-item-block">
                     <input id="name" type="text" placeholder="Enter a name for this action" data-bind="value: $root.editable.name" />
                   </div>
 
-                  <div class="component-item-header">
-                    <label style="display: inline">Description: </label>
-                  </div>
-                  <div>
-                    <textarea id="description" type="text" data-bind="value: $root.editable.description">
-                      Enter a description for this action
-                    </textarea>
+                  <div class="component-item-block">
+                    <label style="display: inline">Resource: </label>
                   </div>
 
-                  <div class="component-item-header">
-                    <input id="name" type="checkbox" data-bind="value: $root.editable.internal" />
-                    <label style="display: inline">For internal use only? </label>
+                  <div class="component-item-block">
+                    <select id="resource"
+                            data-bind="value: $root.editable.resource,
+                                       options: $root.availableResources">
+                    </select>
                   </div>
 
-                  <div class="align-right">
+                  <div class="component-item-block">
                     <button class="btn btn-success" data-bind="click: $root.onUpdate"><i class="icon-white icon-edit"></i>&nbsp;Update</button>
-
                   </div>
                 </div>
               </div>
