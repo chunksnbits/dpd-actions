@@ -5,7 +5,7 @@
     "type": "git",
     "url": "http://github.com/chunksnbits/dpd-actions.git"
   },
-  "version": "0.0.1",
+  "version": "0.0.2",
   "dependencies": {
     "lodash": "^2.4.1",
     "npmlog": "^0.1.1"
