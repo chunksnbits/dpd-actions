@@ -9,7 +9,7 @@ This custom resource type allows you to define custom actions, to be performed o
 
 Within your deployd app, you can add dpd-actions using npm:
 
-`$ npm install git://github.com/chunksnbits/dpd-actions.git`
+`npm install dpd-actions`
 
 See [Installing Modules](http://docs.deployd.com/docs/using-modules/installing-modules.md) for details.
 
@@ -18,13 +18,13 @@ See [Installing Modules](http://docs.deployd.com/docs/using-modules/installing-m
 Go to the deployd dashboard and add a new dpd-action. Specify a name for your action ('myactions').
 In the actions panel add actions using the provided forms and add the code necessary to execute the action.
 
-Actions can be accessed using the dpd client or http request. 
+Actions can be accessed using the dpd client or http request.
 
 For the dpd client use:
 
 `dpd.actions.myaction('actionname', callback);`
 
-For http access: 
+For http access:
 
 `http.get/post/put/delete('http://*my-host*:*my-port*/actions/myaction/actionname');
 
