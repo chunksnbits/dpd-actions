@@ -1,7 +1,10 @@
-dpd-actions
-===========
+# DEPRECATED (This plugin is no longer maintained
 
-# Deployd custom route action module
+=========== 
+
+# Archive:
+
+## Deployd custom route action module
 
 This custom resource type allows you to define custom actions, to be performed outside the default collection resource, i.e., dpd-actions do not necessarily require a collection to be executed.
 
