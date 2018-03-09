@@ -1,8 +1,7 @@
-# DEPRECATED (This plugin is no longer maintained
+#### *DEPRECATED (This plugin is no longer maintained*
+#### Archive:
 
-=========== 
-
-# Archive:
+---
 
 ## Deployd custom route action module
 
